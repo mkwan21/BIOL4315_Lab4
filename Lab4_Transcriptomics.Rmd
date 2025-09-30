@@ -26,7 +26,7 @@ datatable(meta_data)
 
 # Question 2
 
-```{r Quality_Control}
+```{r Quality_Control_Report}
 qcReport <- rqc(fq_path, pattern = ".fastq.gz", openBrowser = FALSE)
 rqcCycleQualityBoxPlot(qcReport[1:12])
 rqcCycleQualityBoxPlot(qcReport[13:24])
@@ -39,3 +39,26 @@ rqcCycleBaseCallsLinePlot(qcReport[25:36])
 None of the samples have much longer reads than the others.  They are all between 75-100 bases.  The shortest number of cycles is 75.
 
 None of the samples have a significant number of N base calls.
+
+# Question 3
+
+```{r Quality_Control}
+fastqFiles = c()
+outputFiles = c()
+output_path = "~/Labs/BIOL4315_Lab4/data/processed_reads/"
+for(i in 1:nrow(meta_data)) {
+  row <- meta_data[i, ]
+  fastqFiles <- c(fastqFiles, row$FileName1, row$FileName2)
+  outputFileName1 <- gsub("/home/vboxuser/R/x86_64-pc-linux-gnu-library/4.5/systemPipeRdata/extdata/fastq/", output_path, row$FileName1)
+  outputFileName1 <- gsub("fastq.gz", "processed.fastq", outputFileName1)
+  meta_data[i, "FileName1"] = outputFileName1
+  outputFileName2 <- gsub("/home/vboxuser/R/x86_64-pc-linux-gnu-library/4.5/systemPipeRdata/extdata/fastq/", output_path, row$FileName2)
+  outputFileName2 <- gsub("fastq.gz", "processed.fastq", outputFileName2)
+  meta_data[i, "FileName2"] <- outputFileName2
+  outputFiles <- c(outputFiles, outputFileName1, outputFileName2 )
+}
+
+preprocessReads(fastqFiles, outputFiles, nBases = 1, truncateEndBases = 3, Lpattern = "GCCCGGGTAA")
+datatable(meta_data)
+
+```
