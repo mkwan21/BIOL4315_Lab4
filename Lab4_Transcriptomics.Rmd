@@ -9,7 +9,29 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r Required_Libraries}
+```{r Required_Libraries, include = FALSE}
 
 lapply(c("docopt", "DT", "pheatmap","GenomicFeatures", "DESeq2", "edgeR", "systemPipeR", "systemPipeRdata", "BiocStyle", "GO.db", "dplyr", "tidyr", "stringr", "Rqc", "QuasR", "DT", "ape", "clusterProfiler","biomaRt","EnhancedVolcano"), require, character.only = TRUE)
+library("DT")
+```
+# Question 1
+
+```{r Locate_Samples}
+fq_path <- systemPipeRdata::pathList()$fastqdir
+meta_data <- read.table("/home/vboxuser/R/x86_64-pc-linux-gnu-library/4.5/systemPipeRdata/extdata/param/targetsPE.txt", header = TRUE)
+meta_data$FileName1 <- gsub("./data/", fq_path, meta_data$FileName1)
+meta_data$FileName2<- gsub("./data/", fq_path, meta_data$FileName2)
+datatable(meta_data)
+```
+
+# Question 2
+
+```{r Quality_Control}
+qcReport <- rqc(fq_path, pattern = ".fastq.gz", openBrowser = FALSE)
+rqcCycleQualityBoxPlot(qcReport[1:12])
+rqcCycleQualityBoxPlot(qcReport[13:24])
+rqcCycleQualityBoxPlot(qcReport[25:36])
+rqcCycleBaseCallsLinePlot(qcReport[1:12])
+rqcCycleBaseCallsLinePlot(qcReport[13:24])
+rqcCycleBaseCallsLinePlot(qcReport[25:36])
 ```
