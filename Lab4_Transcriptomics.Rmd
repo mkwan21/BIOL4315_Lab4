@@ -35,3 +35,7 @@ rqcCycleBaseCallsLinePlot(qcReport[1:12])
 rqcCycleBaseCallsLinePlot(qcReport[13:24])
 rqcCycleBaseCallsLinePlot(qcReport[25:36])
 ```
+
+None of the samples have much longer reads than the others.  They are all between 75-100 bases.  The shortest number of cycles is 75.
+
+None of the samples have a significant number of N base calls.
