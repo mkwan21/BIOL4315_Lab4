@@ -91,4 +91,18 @@ tryCatch({
 
 # Question 5
 
-
+```{r Alignment_Statistics}
+hisat2_logs_dir <- "~/Labs/BIOL4315_Lab4/output/bam_files"
+log_files <- list.files(hisat2_logs_dir, pattern = "\\_hisat2\\.log$", full.names = TRUE)
+percent_aligned <- 1:length(log_files)
+for (i in seq_along(percent_aligned)) {
+  percent_aligned[i] <- readLines(log_files[i])[length(readLines(log_files[i]))]
+}
+align_df <- data.frame(sort(meta_data$SampleName),percent_aligned)
+align_df <- align_df %>% 
+  mutate(percent_aligned = as.numeric(
+    stringr::str_split_i(align_df$percent_aligned, "%",1))) %>% 
+  rename(samplename = sort.meta_data.SampleName.)
+datatable(align_df)
+ggplot()+geom_boxplot(aes(y=align_df$percent_aligned))+scale_x_discrete()+labs(title = "Alignment of A. thaliana Transcript Samples", y = "Percentage Reads Aligned")
+```
