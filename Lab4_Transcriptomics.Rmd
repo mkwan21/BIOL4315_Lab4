@@ -62,3 +62,33 @@ preprocessReads(fastqFiles, outputFiles, nBases = 1, truncateEndBases = 3, Lpatt
 datatable(meta_data)
 
 ```
+
+```{r Index_Reference, include = FALSE}
+reference_genome <- "~/Labs/BIOL4315_Lab4/data/GCF_000001735.4_TAIR10.1_genomic.fna"
+tryCatch({
+  system2(command = "hisat2-build", args = c("-p","8", reference_genome, "~/Labs/BIOL4315_Lab4/data/hisat2_index/tair10.1_index"), stdout = TRUE, stderr = TRUE)
+  }, error = function(e) {
+paste("hisat2-build...", "Indexing failed with error:", e$message)
+})
+```
+
+hisat2-build -p 8 ~/Labs/BIOL4315_Lab4/data/GCF_000001735.4_TAIR10.1_genomic.fna ~/Labs/BIOL4315_Lab4/data/hisat2_index/tair10.1_index
+
+# Question 4
+```{r Alignment}
+for(i in 1:nrow(meta_data)) {
+row <- meta_data[i, ]
+tryCatch({
+  hisat2_output <- system2(command = "hisat2", args = c("-x","~/Labs/BIOL4315_Lab4/data/hisat2_index/tair10.1_index", row$FileName1, "-p", "8", "-S", paste("~/Labs/BIOL4315_Lab4/output/sam_files/", row$SampleName, ".sam", sep = "" )), stdout = TRUE, stderr = TRUE)
+  writeLines(hisat2_output, paste("~/Labs/BIOL4315_Lab4/output/bam_files/", row$SampleName, "_hisat2.log", sep = "") )
+  system2(command = "samtools", args = c("view", "-bS", paste("~/Labs/BIOL4315_Lab4/output/sam_files/", row$SampleName, ".sam", sep = ""), ">", paste("~/Labs/BIOL4315_Lab4/output/bam_files/", row$SampleName, ".bam", sep = "")), stdout = TRUE, stderr = TRUE)
+  system2(command = "samtools", args = c("sort", paste("~/Labs/BIOL4315_Lab4/output/bam_files/", row$SampleName, ".bam", sep = ""), "-o", paste("~/Labs/BIOL4315_Lab4/output/bam_files/", row$SampleName, ".sorted.bam", sep = "")), stdout = TRUE, stderr = TRUE)
+  system2(command = "samtools", args = c("index", paste("~/Labs/BIOL4315_Lab4/output/bam_files/", row$SampleName, ".sorted.bam", sep = "")), stdout = TRUE, stderr = TRUE)
+  }, error = function(e) {paste("hisat2...", "Alignment failed with error:", e$message)
+})
+}
+```
+
+# Question 5
+
+
