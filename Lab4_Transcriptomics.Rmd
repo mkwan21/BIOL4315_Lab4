@@ -73,7 +73,7 @@ paste("hisat2-build...", "Indexing failed with error:", e$message)
 })
 ```
 
-hisat2-build -p 8 ~/Labs/BIOL4315_Lab4/data/GCF_000001735.4_TAIR10.1_genomic.fna ~/Labs/BIOL4315_Lab4/data/hisat2_index/tair10.1_index
+
 
 # Question 4
 ```{r Alignment}
@@ -208,4 +208,12 @@ p <- ggplot(plot_data, aes(x = Comparison, y = Count, fill = Regulation)) +
 p
 ```
 
+# Question 8
 
+Gene expression was different in each group: mock, avirulent and virulent.
+
+Arabidopsis responds to each attack, physical, bacterial and viral by differentially expressing its genes.
+
+The groupings differ between the two approaches because the first approach uses the whole set of genes while the second approach only uses a subset of the genes, those showing differential expression, to perform the clustering.
+
+The second approach better matches what we would expect. At a given point in time, mock samples should be grouped with mock samples, avirulent samples should be grouped with avirulent samples and virulent samples should be grouped with virulent samples.
