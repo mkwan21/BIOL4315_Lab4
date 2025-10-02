@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 lapply(c("docopt", "DT", "pheatmap","GenomicFeatures", "DESeq2", "edgeR", "systemPipeR", "systemPipeRdata", "BiocStyle", "GO.db", "dplyr", "tidyr", "stringr", "Rqc", "QuasR", "DT", "ape", "clusterProfiler","biomaRt","EnhancedVolcano"), require, character.only = TRUE)
 library("DT")
+library("Rsubread")
 ```
 # Question 1
 
@@ -106,3 +107,105 @@ align_df <- align_df %>%
 datatable(align_df)
 ggplot()+geom_boxplot(aes(y=align_df$percent_aligned))+scale_x_discrete()+labs(title = "Alignment of A. thaliana Transcript Samples", y = "Percentage Reads Aligned")
 ```
+# Question 6
+
+```{r Feature_Counts}
+bfiles <- list.files("~/Labs/BIOL4315_Lab4/output/bam_files", pattern = ".sorted.bam$", full.names = TRUE)
+gene_count_list <- Rsubread::featureCounts(files = bfiles, annot.ext = "~/Labs/BIOL4315_Lab4/data/GCF_000001735.4_TAIR10.1_genomic.gtf", isGTFAnnotationFile = TRUE, allowMultiOverlap = FALSE, isPairedEnd = FALSE, nthreads = 8, minMQS = 10, GTF.featureType ="exon", GTF.attrType = "gene_id")
+count_table = gene_count_list$counts
+new_column_names <- gsub(".sorted.bam", "", colnames(count_table))
+colnames(count_table) <- new_column_names
+mask = rowSums(count_table) != 0
+count_table <- count_table[mask, ]
+datatable(count_table)
+```
+# Question 7
+
+```{r Comparisons}
+comp <- systemPipeR::readComp("~/R/x86_64-pc-linux-gnu-library/4.5/systemPipeRdata/extdata/param/targetsPE.txt")
+comp[[1]]
+```
+
+```{r Differential_Expression_Over_Time}
+coldata <- meta_data %>% dplyr::select(SampleName,SampleLong,Factor) %>% 
+  dplyr::mutate(SampleLong=str_split_i(SampleLong, "\\.",1)) %>%
+  dplyr::rename(condition = SampleLong) %>%
+  dplyr::mutate(condition = factor(condition)) %>% 
+  dplyr::mutate(Factor = factor(Factor)) 
+base::rownames(coldata) <- coldata$SampleName
+coldata <- coldata %>% mutate(SampleName = factor(SampleName))
+coldata$type <- factor(rep("single-read", nrow(coldata)))
+coldata <- coldata[base::match(base::colnames(count_table), rownames(coldata)),]
+all(rownames(coldata) == base::colnames(count_table))
+
+dds2 <- DESeqDataSetFromMatrix(countData = count_table, colData = coldata, design = ~ Factor)
+dds2_results <- DESeq(dds2)
+res2 <- DESeq2::results(dds2_results)
+
+res_M1_A1 <- DESeq2::results(dds2_results, contrast = c("Factor", "M1", "A1"), alpha = 0.2)
+res_M1_V1 <- DESeq2::results(dds2_results, contrast = c("Factor", "M1", "V1"), alpha = 0.2)
+res_A1_V1 <- DESeq2::results(dds2_results, contrast = c("Factor", "A1", "V1"), alpha = 0.2)
+res_M6_A6 <- DESeq2::results(dds2_results, contrast = c("Factor", "M6", "A6"), alpha = 0.2)
+res_M6_V6 <- DESeq2::results(dds2_results, contrast = c("Factor", "M6", "V6"), alpha = 0.2)
+res_A6_V6 <- DESeq2::results(dds2_results, contrast = c("Factor", "A6", "V6"), alpha = 0.2)
+res_M12_A12 <- DESeq2::results(dds2_results, contrast = c("Factor", "M12", "A12"), alpha = 0.2)
+res_M12_V12 <- DESeq2::results(dds2_results, contrast = c("Factor", "M12", "V12"), alpha = 0.2)
+res_A12_V12 <- DESeq2::results(dds2_results, contrast = c("Factor", "A12", "V12"), alpha = 0.2)
+
+filter_and_count <- function(res_obj, comparison_name, fc_threshold = 2) {
+  res_filtered <- res_obj[!is.na(res_obj$padj) & !is.na(res_obj$log2FoldChange), ]
+  sig_genes <- res_filtered[abs(res_filtered$log2FoldChange) >= log2(fc_threshold), ]
+  up_regulated <- sum(sig_genes$log2FoldChange > 0)
+  down_regulated <- sum(sig_genes$log2FoldChange < 0)
+  return(data.frame(
+    Comparison = comparison_name,
+    Up_regulated = up_regulated,
+    Down_regulated = down_regulated
+  ))
+}
+
+results_summary <- rbind(
+  filter_and_count(res_M1_A1, "M1 vs A1"),
+  filter_and_count(res_M1_V1, "M1 vs V1"),
+  filter_and_count(res_A1_V1, "A1 vs V1"),
+  filter_and_count(res_M6_A6, "M6 vs A6"),
+  filter_and_count(res_M6_V6, "M6 vs V6"),
+  filter_and_count(res_A6_V6, "A6 vs V6"),
+  filter_and_count(res_M12_A12, "M12 vs A12"),
+  filter_and_count(res_M12_V12, "M12 vs V12"),
+  filter_and_count(res_A12_V12, "A12 vs V12")
+)
+print(results_summary)
+
+
+```
+
+```{r DE_Over_Time_Visual}
+plot_data <- results_summary %>%
+  pivot_longer(cols = c(Up_regulated, Down_regulated), 
+               names_to = "Regulation", 
+               values_to = "Count") %>%
+  mutate(Regulation = factor(Regulation, levels = c("Up_regulated", "Down_regulated")))
+
+p <- ggplot(plot_data, aes(x = Comparison, y = Count, fill = Regulation)) +
+  geom_bar(stat = "identity", position = "stack") +
+  coord_flip() +  # Makes it horizontal
+  labs(
+    title = "Differentially Expressed Genes by Comparison",
+    subtitle = "Fold Change >= 2, alpha = 0.2",
+    x = "Comparison",
+    y = "Number of Genes",
+    fill = "Regulation"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
+    axis.text = element_text(size = 10),
+    axis.title = element_text(size = 12),
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10))
+p
+```
+
+
